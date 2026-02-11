@@ -306,7 +306,6 @@ do
 
     if not startup_args.ignoreui then
         library.screengui = Instance.new('ScreenGui')
-        syn.protect_gui(library.screengui)
         library.screengui.Parent = game:GetService('CoreGui')
 
         local button = Instance.new('ImageButton')
@@ -647,22 +646,32 @@ do
 
     function utility:tween(object, property, value_new, time, style, direction)
         local tween = {}
+        
         tween.style = style or Enum.EasingStyle.Linear
         tween.direction = direction or Enum.EasingDirection.In
         tween.value_start = object[property]
         tween.value_new = value_new
         tween.progress_lerp = 0
         tween.Completed = library.signal.new()
- 
+
         function tween:Cancel()
-            tween.connection:Disconnect()
+            if tween.connection then
+                tween.connection:Disconnect()
+            end
             table.clear(tween)
         end
 
         tween.connection = library:connection(runservice.Heartbeat, function(delta)
-            tween.progress_lerp = tween.progress_lerp + (delta / time)
+            if not object or not object._object then
+                tween.connection:Disconnect()
+                tween.Completed:Fire()
+                return
+            end
 
-            tween.progress_tween = tweenservice:GetValue(tween.progress_lerp, tween.style, tween.direction)
+            tween.progress_lerp = tween.progress_lerp + (delta / time)
+            
+            local ratio = math.min(tween.progress_lerp, 1)
+            tween.progress_tween = tweenservice:GetValue(ratio, tween.style, tween.direction)
 
             if typeof(value_new) == 'number' then
                 tween.value_current = self:lerp(tween.value_start, value_new, tween.progress_tween)
@@ -670,7 +679,9 @@ do
                 tween.value_current = tween.value_start:lerp(tween.value_new, tween.progress_tween)
             end
             
-            if utility.table.includes(object, '_object') and not rawget(object._object, '__OBJECT_EXISTS') == true then
+            local is_alive = pcall(function() return object._object.Visible ~= nil end)
+            
+            if not is_alive then
                 tween.connection:Disconnect()
                 tween.Completed:Fire()
                 return
@@ -678,12 +689,11 @@ do
 
             object[property] = tween.value_current
 
-            if tween.progress_lerp >= 1 or object == nil then
+            if tween.progress_lerp >= 1 then
                 tween.connection:Disconnect()
                 tween.Completed:Fire()
                 return
             end
-
         end)
 
         return tween
