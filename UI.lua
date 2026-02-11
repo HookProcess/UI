@@ -2121,7 +2121,8 @@ do
 
         function drawing:Remove()
 
-            if rawget(drawing._object, '__OBJECT_EXISTS') then
+            local object_exists = pcall(function() return self._object.Visible ~= nil end)
+            if object_exists then
                 self._object:Remove()
             end
 
@@ -3473,7 +3474,7 @@ function library:create_settings_tab(menu)
     end})
 
     settings_main:button({text = 'join discord', callback = function()
-        local res = syn.request({
+        local res = request({
             Url = 'http://127.0.0.1:6463/rpc?v=1',
             Method = 'POST',
             Headers = {
