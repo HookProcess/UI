@@ -1850,9 +1850,12 @@ do
                 local modes = {"hold", "toggle", "always"}
                 local current_index = table.find(modes, keybind.mode) or 1
                 local next_index = (current_index % #modes) + 1
-
+                
                 keybind.mode = modes[next_index]
-                library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
+                
+                if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
+                    library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
+                end
             end)
 
             library:connection(keybind.objects.container.MouseEnter, function()
@@ -1869,46 +1872,39 @@ do
                 if input.KeyCode == keybind.bind or input.UserInputType == keybind.bind then
                     if keybind.mode == 'toggle' then
                         keybind.state = not keybind.state
+                        
+                        if keybind.indicator then
+                            keybind.indicator:set_enabled(keybind.state)
+                        end
+
                     elseif keybind.mode == 'hold' then
                         keybind.state = true
 
-                        local c; c = library:connection(inputservice.InputEnded, function(input)
-                            if input.KeyCode == keybind.bind or input.UserInputType == keybind.bind then
+                        if keybind.indicator then
+                            keybind.indicator:set_enabled(true)
+                        end
+
+                        local c; c = library:connection(inputservice.InputEnded, function(input_end)
+                            if input_end.KeyCode == keybind.bind or input_end.UserInputType == keybind.bind then
                                 c:Disconnect()
+                                keybind.state = false
+                                
                                 if keybind.indicator then
                                     keybind.indicator:set_enabled(false)
                                 end
-                                keybind.state = false
-                                keybind.callback(keybind.state)
+                                
+                                keybind.callback(false)
                                 if keybind.flag ~= nil then
-                                    flags[keybind.flag] = keybind.state
+                                    flags[keybind.flag] = false
                                 end
                             end
                         end)
 
                     else
                         keybind.state = true
-
-                        local c; c = library:connection(runservice.Heartbeat, function(delta)
-                            if (input.KeyCode == keybind.key and not inputservice:IsKeyDown(keybind.key)) or (input.UserInputType == keybind.key and not inputservice:IsMouseButtonPressed(keybind.key)) then
-                                c:Disconnect()
-                                if keybind.flag ~= nil then
-                                    flags[keybind.flag] = keybind.state
-                                end
-                                if keybind.indicator then
-                                    keybind.indicator:set_enabled(false)
-                                end
-                                keybind.state = false
-                                keybind.callback(keybind.state)
-                            end
-                            if keybind.mode == 'always' then
-                                keybind.callback(delta)
-                            end
-                        end)
-
                     end
 
-                    if keybind.indicator then
+                    if keybind.mode ~= 'hold' and keybind.indicator then
                         keybind.indicator:set_enabled(keybind.state)
                     end
 
@@ -2161,17 +2157,23 @@ do
 
         drawing._metatable = setmetatable({}, {
             __index = function(self, idx)
-                if drawing[idx] ~= nil then
-                    return drawing[idx]
-                elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
-                    return drawing._properties[idx]
-                elseif drawing._object[idx] ~= nil then
-                    return drawing._object[idx]
-                else
-                    warn(("invalid '%s' property '%s'."):format(class, idx))
-                end
+                local ok, res = pcall(function()
+                    if drawing[idx] ~= nil then
+                        return drawing[idx]
+                    elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
+                        return drawing._properties[idx]
+                    elseif drawing._object[idx] ~= nil then
+                        return drawing._object[idx]
+                    end
+                end)
+                return ok and res or nil
             end,
+
             __newindex = function(self, idx, val)
+                -- SAFETY: Check if the drawing object is still alive
+                local alive = pcall(function() return drawing._object.Visible ~= nil end)
+                if not alive then return end
+
                 if table_find(drawing._readonly, idx) then
                     warn(("'%s' property '%s' is readonly."):format(class, idx))
                 elseif drawing._handlers[idx] then
@@ -2182,8 +2184,6 @@ do
                     drawing._properties[idx] = val
                 elseif utility.table.includes(drawing._object, idx) or idx == 'Data' then
                     drawing._object[idx] = val
-                else
-                    warn(("invalid '%s' property '%s'."):format(class, idx))
                 end
             end
         })
