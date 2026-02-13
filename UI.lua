@@ -464,15 +464,8 @@ do
     end
 
     function library:update_notifications()
-        for i, v in next, self.notifs do
-            if v and v.objects and v.objects.container then
-                local alive = pcall(function() 
-                    return v.objects.container.Visible ~= nil 
-                end)
-                if alive then
-                    utility:tween(v.objects.container, 'Position', udim2_new(0, 5, 0, 100 + (i * 25)), 0.05)
-                end
-            end
+        for i,v in next, self.notifs do
+            utility:tween(v.objects.container, 'Position', udim2_new(0,5,0,100 + (i * 25)), 0.05)
         end
     end
 
@@ -1937,60 +1930,53 @@ do
                 if input.KeyCode == keybind.bind or input.UserInputType == keybind.bind then
                     if keybind.mode == 'toggle' then
                         keybind.state = not keybind.state
-                        
-                        if keybind.indicator then
-                            keybind.indicator:set_enabled(keybind.state)
-                        end
-
                     elseif keybind.mode == 'hold' then
                         keybind.state = true
 
-                        if keybind.indicator then
-                            keybind.indicator:set_enabled(true)
-                        end
-
-                        local c; c = library:connection(inputservice.InputEnded, function(input_end)
-                            if input_end.KeyCode == keybind.bind or input_end.UserInputType == keybind.bind then
+                        local c; c = library:connection(inputservice.InputEnded, function(input)
+                            if input.KeyCode == keybind.bind or input.UserInputType == keybind.bind then
                                 c:Disconnect()
-                                keybind.state = false
-                                
                                 if keybind.indicator then
                                     keybind.indicator:set_enabled(false)
                                 end
-                                
-                                keybind.callback(false)
-                                
+                                keybind.state = false
+                                keybind.callback(keybind.state)
                                 if keybind.flag ~= nil then
-                                    flags[keybind.flag] = false
+                                    flags[keybind.flag] = keybind.state
                                 end
                             end
                         end)
 
                     else
                         keybind.state = true
+
+                        local c; c = library:connection(runservice.Heartbeat, function(delta)
+                            if (input.KeyCode == keybind.key and not inputservice:IsKeyDown(keybind.key)) or (input.UserInputType == keybind.key and not inputservice:IsMouseButtonPressed(keybind.key)) then
+                                c:Disconnect()
+                                if keybind.flag ~= nil then
+                                    flags[keybind.flag] = keybind.state
+                                end
+                                if keybind.indicator then
+                                    keybind.indicator:set_enabled(false)
+                                end
+                                keybind.state = false
+                                keybind.callback(keybind.state)
+                            end
+                            if keybind.mode == 'always' then
+                                keybind.callback(delta)
+                            end
+                        end)
+
                     end
 
-                    if keybind.mode ~= 'hold' and keybind.indicator then
+                    if keybind.indicator then
                         keybind.indicator:set_enabled(keybind.state)
                     end
 
                     keybind.callback(keybind.state)
-                    
                     if keybind.flag ~= nil then
                         flags[keybind.flag] = keybind.state
                     end
-                end
-            end)
-
-            library:connection(keybind.objects.container.MouseButton2Down, function()
-                local modes = {"hold", "toggle", "always"}
-                local current_index = table.find(modes, keybind.mode) or 1
-                local next_index = (current_index % #modes) + 1
-                
-                keybind.mode = modes[next_index]
-                
-                if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
-                    --library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
                 end
             end)
 
@@ -2106,21 +2092,12 @@ do
         end
 
         drawing._handlers.Position = function(position)
-            local is_alive = pcall(function() 
-                return drawing._object.Visible ~= nil 
-            end)
-
-            if not is_alive then 
-                return 
-            end
-
             assert(typeof(position) == 'UDim2', ("invalid Position type. expected 'UDim2', got '%s'."):format(typeof(position)))
 
             local parent = drawing._properties.Parent
             local parent_position = parent == nil and vector2_zero or parent.AbsolutePosition
             local parent_size = parent == nil and library.screensize or parent.AbsoluteSize
             local new_position = utility:udim2_to_vector2(position, parent_size)
-            
             local anchorpoint = (
                 drawing._properties.AnchorPoint ~= nil and 
                 utility:udim2_to_vector2(
@@ -2131,10 +2108,7 @@ do
             
             drawing._properties.Position = position
             drawing._properties.AbsolutePosition = utility.vector2.floor((parent_position + new_position) - anchorpoint)
-
-
             drawing._object.Position = drawing._properties.AbsolutePosition
-
 
             for i,v in next, drawing._children do
                 v.Position = v.Position
