@@ -1990,7 +1990,7 @@ do
                 keybind.mode = modes[next_index]
                 
                 if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
-                    library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
+                    --library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
                 end
             end)
 
