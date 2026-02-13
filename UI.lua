@@ -1846,18 +1846,6 @@ do
 
             end)
 
-            library:connection(keybind.objects.container.MouseButton2Down, function()
-                local modes = {"hold", "toggle", "always"}
-                local current_index = table.find(modes, keybind.mode) or 1
-                local next_index = (current_index % #modes) + 1
-                
-                keybind.mode = modes[next_index]
-                
-                if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
-                    library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
-                end
-            end)
-
             library:connection(keybind.objects.container.MouseEnter, function()
                 keybind.objects.keytext.Theme = {['Color'] = 'Accent'}
             end)
@@ -1894,6 +1882,7 @@ do
                                 end
                                 
                                 keybind.callback(false)
+                                
                                 if keybind.flag ~= nil then
                                     flags[keybind.flag] = false
                                 end
@@ -1909,9 +1898,22 @@ do
                     end
 
                     keybind.callback(keybind.state)
+                    
                     if keybind.flag ~= nil then
                         flags[keybind.flag] = keybind.state
                     end
+                end
+            end)
+
+            library:connection(keybind.objects.container.MouseButton2Down, function()
+                local modes = {"hold", "toggle", "always"}
+                local current_index = table.find(modes, keybind.mode) or 1
+                local next_index = (current_index % #modes) + 1
+                
+                keybind.mode = modes[next_index]
+                
+                if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
+                    library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
                 end
             end)
 
@@ -2052,9 +2054,7 @@ do
         end
 
         drawing._handlers.Visible = function(bool)
-            if typeof(bool) ~= 'boolean' then 
-                bool = false 
-            end
+            local bool = (typeof(bool) == "boolean" and bool) or false
 
             local parent_visible = drawing._properties.Parent == nil and true or drawing._properties.Parent._object.Visible
             local visible = bool and parent_visible
