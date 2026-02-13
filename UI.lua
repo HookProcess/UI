@@ -1853,7 +1853,7 @@ do
 
             library:connection(keybind.objects.container.MouseButton2Down, function()
                 local mouse_pos = inputservice:GetMouseLocation()
-                local menu_zindex = 200
+                local menu_zindex = 250
 
                 local mode_menu = library:create('rect', {
                     Size = udim2_new(0, 80, 0, 52),
@@ -1866,21 +1866,37 @@ do
                 local menu_outline = library:create('outline', mode_menu, {Theme = {['Color'] = 'Border 2'}})
                 
                 local function create_mode_btn(name, offset)
-                    local btn = library:create('option', {
-                        text = name,
-                        size = udim2_new(1, 0, 0, 16),
-                        position = udim2_new(0, 0, 0, offset),
-                        zindex = menu_zindex + 1
-                    }, {objects = {container = mode_menu}}, 'button')
+                    local btn_container = library:create('rect', {
+                        Size = udim2_new(1, 0, 0, 16),
+                        Position = udim2_new(0, 0, 0, offset),
+                        Transparency = 0,
+                        Parent = mode_menu,
+                        ZIndex = menu_zindex + 1,
+                        Active = true
+                    })
 
-                    library:connection(btn.objects.container.MouseButton1Down, function()
+                    local btn_label = library:create('text', {
+                        Text = name,
+                        Size = 13,
+                        Theme = {['Color'] = 'Option Text 2'},
+                        Position = udim2_new(0.5, 0, 0, 0),
+                        Center = true,
+                        Outline = true,
+                        Parent = btn_container,
+                        ZIndex = menu_zindex + 2
+                    })
+
+                    library:connection(btn_container.MouseButton1Down, function()
                         keybind.mode = name:lower()
-                        
-                        pcall(function()
-                            library:notification(keybind.text .. " mode: " .. keybind.mode:upper(), 2)
-                        end)
-
                         mode_menu:Remove()
+                    end)
+
+                    library:connection(btn_container.MouseEnter, function()
+                        btn_label.Theme = {['Color'] = 'Accent'}
+                    end)
+
+                    library:connection(btn_container.MouseLeave, function()
+                        btn_label.Theme = {['Color'] = 'Option Text 2'}
                     end)
                 end
 
@@ -1893,11 +1909,13 @@ do
                         task.wait()
                         local m_pos = inputservice:GetMouseLocation()
                         
-                        local is_inside = pcall(function() 
-                            return utility.vector2.inside(m_pos, mode_menu.AbsolutePosition, mode_menu.AbsoluteSize)
-                        end)
+                        local alive = pcall(function() return mode_menu.AbsolutePosition ~= nil end)
+                        if not alive then 
+                            click_check:Disconnect()
+                            return 
+                        end
 
-                        if not is_inside then
+                        if not utility.vector2.inside(m_pos, mode_menu.AbsolutePosition, mode_menu.AbsoluteSize) then
                             mode_menu:Remove()
                             click_check:Disconnect()
                         end
