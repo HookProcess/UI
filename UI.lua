@@ -464,15 +464,8 @@ do
     end
 
     function library:update_notifications()
-        for i, v in next, self.notifs do
-            if v and v.objects and v.objects.container then
-                local alive = pcall(function() 
-                    return v.objects.container.Visible ~= nil 
-                end)
-                if alive then
-                    utility:tween(v.objects.container, 'Position', udim2_new(0, 5, 0, 100 + (i * 25)), 0.05)
-                end
-            end
+        for i,v in next, self.notifs do
+            utility:tween(v.objects.container, 'Position', udim2_new(0,5,0,100 + (i * 25)), 0.05)
         end
     end
 
