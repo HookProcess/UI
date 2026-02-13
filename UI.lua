@@ -1833,7 +1833,6 @@ do
             end
 
             library:connection(keybind.objects.container.MouseButton1Down, function()
-
                 keybind.binding = true
                 keybind:set_text('...')
                 
@@ -1850,7 +1849,60 @@ do
                         c:Disconnect()
                     end
                 end)
+            end)
 
+            library:connection(keybind.objects.container.MouseButton2Down, function()
+                local mouse_pos = inputservice:GetMouseLocation()
+                local menu_zindex = 200
+
+                local mode_menu = library:create('rect', {
+                    Size = udim2_new(0, 80, 0, 52),
+                    Position = udim2_new(0, mouse_pos.X, 0, mouse_pos.Y),
+                    Theme = {['Color'] = 'Group Background'},
+                    ZIndex = menu_zindex,
+                    Visible = true
+                })
+
+                local menu_outline = library:create('outline', mode_menu, {Theme = {['Color'] = 'Border 2'}})
+                
+                local function create_mode_btn(name, offset)
+                    local btn = library:create('option', {
+                        text = name,
+                        size = udim2_new(1, 0, 0, 16),
+                        position = udim2_new(0, 0, 0, offset),
+                        zindex = menu_zindex + 1
+                    }, {objects = {container = mode_menu}}, 'button')
+
+                    library:connection(btn.objects.container.MouseButton1Down, function()
+                        keybind.mode = name:lower()
+                        
+                        pcall(function()
+                            library:notification(keybind.text .. " mode: " .. keybind.mode:upper(), 2)
+                        end)
+
+                        mode_menu:Remove()
+                    end)
+                end
+
+                create_mode_btn("Always", 0)
+                create_mode_btn("Hold", 17)
+                create_mode_btn("Toggle", 34)
+
+                local click_check; click_check = library:connection(inputservice.InputBegan, function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
+                        task.wait()
+                        local m_pos = inputservice:GetMouseLocation()
+                        
+                        local is_inside = pcall(function() 
+                            return utility.vector2.inside(m_pos, mode_menu.AbsolutePosition, mode_menu.AbsoluteSize)
+                        end)
+
+                        if not is_inside then
+                            mode_menu:Remove()
+                            click_check:Disconnect()
+                        end
+                    end
+                end)
             end)
 
             library:connection(keybind.objects.container.MouseEnter, function()
@@ -1920,7 +1972,7 @@ do
                 keybind.mode = modes[next_index]
                 
                 if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
-                    --library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
+                    library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
                 end
             end)
 
