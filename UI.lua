@@ -1846,6 +1846,15 @@ do
 
             end)
 
+            library:connection(keybind.objects.container.MouseButton2Down, function()
+                local modes = {"hold", "toggle", "always"}
+                local current_index = table.find(modes, keybind.mode) or 1
+                local next_index = (current_index % #modes) + 1
+
+                keybind.mode = modes[next_index]
+                library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
+            end)
+
             library:connection(keybind.objects.container.MouseEnter, function()
                 keybind.objects.keytext.Theme = {['Color'] = 'Accent'}
             end)
