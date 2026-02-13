@@ -2035,6 +2035,7 @@ do
             local parent_position = parent == nil and vector2_zero or parent.AbsolutePosition
             local parent_size = parent == nil and library.screensize or parent.AbsoluteSize
             local new_position = utility:udim2_to_vector2(position, parent_size)
+            
             local anchorpoint = (
                 drawing._properties.AnchorPoint ~= nil and 
                 utility:udim2_to_vector2(
@@ -2045,12 +2046,14 @@ do
             
             drawing._properties.Position = position
             drawing._properties.AbsolutePosition = utility.vector2.floor((parent_position + new_position) - anchorpoint)
-            drawing._object.Position = drawing._properties.AbsolutePosition
+
+            if pcall(function() return drawing._object.Visible ~= nil end) then
+                drawing._object.Position = drawing._properties.AbsolutePosition
+            end
 
             for i,v in next, drawing._children do
                 v.Position = v.Position
             end
-
         end
 
         drawing._handlers.Visible = function(bool)
