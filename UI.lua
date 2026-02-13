@@ -2124,13 +2124,26 @@ do
         end
 
         drawing._handlers.Visible = function(bool)
-            assert(typeof(bool) == 'boolean', ("invalid Visible type. expected 'boolean', got '%s'"):format(typeof(bool)))
+
+            if typeof(bool) ~= "boolean" then 
+                bool = false 
+            end
+
+            local is_alive = pcall(function() 
+                return drawing._object.Visible ~= nil 
+            end)
+
+            if not is_alive then 
+                return 
+            end
+
 
             local parent_visible = drawing._properties.Parent == nil and true or drawing._properties.Parent._object.Visible
             local visible = bool and parent_visible
 
             drawing._properties.Visible = bool
             drawing._object.Visible = visible
+
 
             for i,v in next, drawing._children do
                 v.Visible = v.Visible
