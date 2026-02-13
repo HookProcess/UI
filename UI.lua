@@ -2054,20 +2054,18 @@ do
         end
 
         drawing._handlers.Visible = function(bool)
-            local bool = (typeof(bool) == "boolean" and bool) or false
+            assert(typeof(bool) == 'boolean', ("invalid Visible type. expected 'boolean', got '%s'"):format(typeof(bool)))
 
             local parent_visible = drawing._properties.Parent == nil and true or drawing._properties.Parent._object.Visible
             local visible = bool and parent_visible
 
             drawing._properties.Visible = bool
-            
-            if pcall(function() return drawing._object.Visible ~= nil end) then
-                drawing._object.Visible = visible
-            end
+            drawing._object.Visible = visible
 
             for i,v in next, drawing._children do
                 v.Visible = v.Visible
             end
+
         end
 
         drawing._handlers.AnchorPoint = function(anchorpoint)
@@ -2161,35 +2159,29 @@ do
 
         drawing._metatable = setmetatable({}, {
             __index = function(self, idx)
-                local ok, res = pcall(function()
-                    if drawing[idx] ~= nil then
-                        return drawing[idx]
-                    elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
-                        return drawing._properties[idx]
-                    elseif drawing._object[idx] ~= nil then
-                        return drawing._object[idx]
-                    end
-                end)
-                return ok and res or nil
-            end,
-
-            __newindex = function(self, idx, val)
-                if not pcall(function() return drawing._object.Visible ~= nil end) then 
-                    return 
+                if drawing[idx] ~= nil then
+                    return drawing[idx]
+                elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
+                    return drawing._properties[idx]
+                elseif drawing._object[idx] ~= nil then
+                    return drawing._object[idx]
+                else
+                    warn(("invalid '%s' property '%s'."):format(class, idx))
                 end
-                
+            end,
+            __newindex = function(self, idx, val)
                 if table_find(drawing._readonly, idx) then
                     warn(("'%s' property '%s' is readonly."):format(class, idx))
                 elseif drawing._handlers[idx] then
-                    if val ~= nil then
-                        drawing._handlers[idx](val)
-                    end
+                    drawing._handlers[idx](val)
                 elseif drawing[idx] ~= nil then
                     drawing[idx] = val
                 elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
                     drawing._properties[idx] = val
                 elseif utility.table.includes(drawing._object, idx) or idx == 'Data' then
                     drawing._object[idx] = val
+                else
+                    warn(("invalid '%s' property '%s'."):format(class, idx))
                 end
             end
         })
