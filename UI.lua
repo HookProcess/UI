@@ -464,8 +464,15 @@ do
     end
 
     function library:update_notifications()
-        for i,v in next, self.notifs do
-            utility:tween(v.objects.container, 'Position', udim2_new(0,5,0,100 + (i * 25)), 0.05)
+        for i, v in next, self.notifs do
+            if v and v.objects and v.objects.container then
+                local alive = pcall(function() 
+                    return v.objects.container.Visible ~= nil 
+                end)
+                if alive then
+                    utility:tween(v.objects.container, 'Position', udim2_new(0, 5, 0, 100 + (i * 25)), 0.05)
+                end
+            end
         end
     end
 
@@ -1912,7 +1919,7 @@ do
                 
                 keybind.mode = modes[next_index]
                 
-                if pcall(function() return keybind.objects.keytext.Visible ~= nil end) then
+                pcall(function()
                     library:notification(keybind.text .. " mode set to: " .. keybind.mode:upper(), 2)
                 end
             end)
