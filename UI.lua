@@ -2052,18 +2052,22 @@ do
         end
 
         drawing._handlers.Visible = function(bool)
-            assert(typeof(bool) == 'boolean', ("invalid Visible type. expected 'boolean', got '%s'"):format(typeof(bool)))
+            if typeof(bool) ~= 'boolean' then 
+                bool = false 
+            end
 
             local parent_visible = drawing._properties.Parent == nil and true or drawing._properties.Parent._object.Visible
             local visible = bool and parent_visible
 
             drawing._properties.Visible = bool
-            drawing._object.Visible = visible
+            
+            if pcall(function() return drawing._object.Visible ~= nil end) then
+                drawing._object.Visible = visible
+            end
 
             for i,v in next, drawing._children do
                 v.Visible = v.Visible
             end
-
         end
 
         drawing._handlers.AnchorPoint = function(anchorpoint)
@@ -2170,14 +2174,16 @@ do
             end,
 
             __newindex = function(self, idx, val)
-                -- SAFETY: Check if the drawing object is still alive
-                local alive = pcall(function() return drawing._object.Visible ~= nil end)
-                if not alive then return end
-
+                if not pcall(function() return drawing._object.Visible ~= nil end) then 
+                    return 
+                end
+                
                 if table_find(drawing._readonly, idx) then
                     warn(("'%s' property '%s' is readonly."):format(class, idx))
                 elseif drawing._handlers[idx] then
-                    drawing._handlers[idx](val)
+                    if val ~= nil then
+                        drawing._handlers[idx](val)
+                    end
                 elseif drawing[idx] ~= nil then
                     drawing[idx] = val
                 elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
