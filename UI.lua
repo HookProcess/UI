@@ -2036,6 +2036,14 @@ do
         end
 
         drawing._handlers.Position = function(position)
+            local is_alive = pcall(function() 
+                return drawing._object.Visible ~= nil 
+            end)
+
+            if not is_alive then 
+                return 
+            end
+
             assert(typeof(position) == 'UDim2', ("invalid Position type. expected 'UDim2', got '%s'."):format(typeof(position)))
 
             local parent = drawing._properties.Parent
@@ -2054,13 +2062,14 @@ do
             drawing._properties.Position = position
             drawing._properties.AbsolutePosition = utility.vector2.floor((parent_position + new_position) - anchorpoint)
 
-            if pcall(function() return drawing._object.Visible ~= nil end) then
-                drawing._object.Position = drawing._properties.AbsolutePosition
-            end
+
+            drawing._object.Position = drawing._properties.AbsolutePosition
+
 
             for i,v in next, drawing._children do
                 v.Position = v.Position
             end
+
         end
 
         drawing._handlers.Visible = function(bool)
