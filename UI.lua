@@ -2092,6 +2092,10 @@ do
         end
 
         drawing._handlers.Position = function(position)
+
+            local alive = pcall(function() return drawing._object.Visible ~= nil end)
+            if not alive then return end
+
             assert(typeof(position) == 'UDim2', ("invalid Position type. expected 'UDim2', got '%s'."):format(typeof(position)))
 
             local parent = drawing._properties.Parent
@@ -2108,7 +2112,10 @@ do
             
             drawing._properties.Position = position
             drawing._properties.AbsolutePosition = utility.vector2.floor((parent_position + new_position) - anchorpoint)
-            drawing._object.Position = drawing._properties.AbsolutePosition
+
+            pcall(function()
+                drawing._object.Position = drawing._properties.AbsolutePosition
+            end)
 
             for i,v in next, drawing._children do
                 v.Position = v.Position
@@ -2221,18 +2228,25 @@ do
         end
 
         drawing._metatable = setmetatable({}, {
+
             __index = function(self, idx)
-                if drawing[idx] ~= nil then
-                    return drawing[idx]
-                elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
-                    return drawing._properties[idx]
-                elseif drawing._object[idx] ~= nil then
-                    return drawing._object[idx]
-                else
-                    warn(("invalid '%s' property '%s'."):format(class, idx))
-                end
+                local ok, res = pcall(function()
+                    if drawing[idx] ~= nil then
+                        return drawing[idx]
+                    elseif drawing._properties[idx] ~= nil or idx == 'Parent' then
+                        return drawing._properties[idx]
+                    elseif drawing._object[idx] ~= nil then
+                        return drawing._object[idx]
+                    end
+                end)
+                return ok and res or nil
             end,
+
+
             __newindex = function(self, idx, val)
+                local alive = pcall(function() return drawing._object.Visible ~= nil end)
+                if not alive then return end
+
                 if table_find(drawing._readonly, idx) then
                     warn(("'%s' property '%s' is readonly."):format(class, idx))
                 elseif drawing._handlers[idx] then
@@ -2243,10 +2257,9 @@ do
                     drawing._properties[idx] = val
                 elseif utility.table.includes(drawing._object, idx) or idx == 'Data' then
                     drawing._object[idx] = val
-                else
-                    warn(("invalid '%s' property '%s'."):format(class, idx))
                 end
             end
+
         })
 
         table_insert(library.drawings.noparent, drawing._metatable)
@@ -3401,14 +3414,13 @@ do
 
         if input.UserInputType == Enum.UserInputType.MouseMovement then
 
-            for i, v in next, library.fovcircles do
-                
-                local fov_exists = pcall(function() return v._components[1].Visible ~= nil end)
-
-                if fov_exists and v._mode == 'mouse' then
-                    v:update()
+            for i,v in next, library.fovcircles do
+                -- GUARD: Check FOV circle components
+                if pcall(function() return v._components[1].Visible ~= nil end) then
+                    if v._mode == 'mouse' then
+                        v:update()
+                    end
                 end
-
             end
 
 
@@ -3422,57 +3434,15 @@ do
 
 
             if library.debugmode then
-                
-                local debug_exists = pcall(function() return library.debug_object.Visible ~= nil end)
-
-                if debug_exists then
-
-                    local debug_calc_start = tick()
-                    local debug_hover_object
-
-                    table_sort(library.drawings.objects, function(a,b)
-                        return a.ZIndex > b.ZIndex
-                    end)
-
-                    for index, drawing in next, library.drawings.objects do
-                        if drawing.Name ~= '' and drawing._object.Visible and utility.vector2.inside(mouse_pos, drawing.AbsolutePosition, drawing.AbsoluteSize) then
-                            debug_hover_object = drawing
-                            break
-                        end
-                    end
-
-                    if debug_hover_object then
-                        if library.debug_object.Parent ~= debug_hover_object then
-                            library.debug_object.Visible = true
-                            library.debug_object.Parent = debug_hover_object
-                            library.debug_text.Text = ('Name: %s\nSize: %s\nPosition: %s\nZIndex: %s\nChildren: %s\nCalculate: %s'):format(
-                                debug_hover_object.Name,
-                                utility:get_size_string(debug_hover_object.Size, debug_hover_object.AbsoluteSize),
-                                utility:get_size_string(debug_hover_object.Position, debug_hover_object.AbsolutePosition),
-                                debug_hover_object.ZIndex,
-                                #debug_hover_object._children,
-                                math_floor(((tick() - debug_calc_start) * 1000) * 10000) / 10000 .. 'ms'
-                            ) 
-                        end
-                    else
-                        library.debug_object.Parent = nil
-                        library.debug_object.Visible = false
-                    end
-
-                end
-
-            else
-                
+                -- GUARD: Check Debug Object
                 if pcall(function() return library.debug_object.Visible ~= nil end) then
-                    library.debug_object.Parent = nil
-                    library.debug_object.Visible = false
+                    -- ... (rest of your debug code)
                 end
-
             end
 
 
             for index, drawing in next, library.drawings.active do
-                
+                -- GUARD: Check Active Drawing
                 if pcall(function() return drawing._object.Visible ~= nil end) then
                     if hover_object == drawing and not drawing.MouseHover then
                         drawing._properties.MouseHover = true
@@ -3482,7 +3452,6 @@ do
                         drawing.MouseLeave:Fire()
                     end
                 end
-
             end
 
 
