@@ -3401,58 +3401,79 @@ do
 
         if input.UserInputType == Enum.UserInputType.MouseMovement then
 
-            for i,v in next, library.fovcircles do
-                if v._mode == 'mouse' then
+            for i, v in next, library.fovcircles do
+                
+                local fov_exists = pcall(function() return v._components[1].Visible ~= nil end)
+
+                if fov_exists and v._mode == 'mouse' then
                     v:update()
                 end
+
             end
+
 
             if not (library.has_init and library.menu and library.menu.open) then
                 return
             end
 
+
             local mouse_pos = inputservice:GetMouseLocation()
             local hover_object = library:get_hover_object()
 
+
             if library.debugmode then
-                local debug_calc_start = tick()
-                local debug_hover_object
+                
+                local debug_exists = pcall(function() return library.debug_object.Visible ~= nil end)
 
-                table_sort(library.drawings.objects, function(a,b)
-                    return a.ZIndex > b.ZIndex
-                end)
+                if debug_exists then
 
-                for index, drawing in next, library.drawings.objects do
-                    if drawing.Name ~= '' and drawing._object.Visible and utility.vector2.inside(mouse_pos, drawing.AbsolutePosition, drawing.AbsoluteSize) then
-                        debug_hover_object = drawing
-                        break
+                    local debug_calc_start = tick()
+                    local debug_hover_object
+
+                    table_sort(library.drawings.objects, function(a,b)
+                        return a.ZIndex > b.ZIndex
+                    end)
+
+                    for index, drawing in next, library.drawings.objects do
+                        if drawing.Name ~= '' and drawing._object.Visible and utility.vector2.inside(mouse_pos, drawing.AbsolutePosition, drawing.AbsoluteSize) then
+                            debug_hover_object = drawing
+                            break
+                        end
                     end
+
+                    if debug_hover_object then
+                        if library.debug_object.Parent ~= debug_hover_object then
+                            library.debug_object.Visible = true
+                            library.debug_object.Parent = debug_hover_object
+                            library.debug_text.Text = ('Name: %s\nSize: %s\nPosition: %s\nZIndex: %s\nChildren: %s\nCalculate: %s'):format(
+                                debug_hover_object.Name,
+                                utility:get_size_string(debug_hover_object.Size, debug_hover_object.AbsoluteSize),
+                                utility:get_size_string(debug_hover_object.Position, debug_hover_object.AbsolutePosition),
+                                debug_hover_object.ZIndex,
+                                #debug_hover_object._children,
+                                math_floor(((tick() - debug_calc_start) * 1000) * 10000) / 10000 .. 'ms'
+                            ) 
+                        end
+                    else
+                        library.debug_object.Parent = nil
+                        library.debug_object.Visible = false
+                    end
+
                 end
 
-                if debug_hover_object then
-                    if library.debug_object.Parent ~= debug_hover_object then
-                        library.debug_object.Visible = true
-                        library.debug_object.Parent = debug_hover_object
-                        library.debug_text.Text = ('Name: %s\nSize: %s\nPosition: %s\nZIndex: %s\nChildren: %s\nCalculate: %s'):format(
-                            debug_hover_object.Name,
-                            utility:get_size_string(debug_hover_object.Size, debug_hover_object.AbsoluteSize),
-                            utility:get_size_string(debug_hover_object.Position, debug_hover_object.AbsolutePosition),
-                            debug_hover_object.ZIndex,
-                            #debug_hover_object._children,
-                            math_floor(((tick() - debug_calc_start) * 1000) * 10000) / 10000 .. 'ms'
-                        ) 
-                    end
-                else
+            else
+                
+                if pcall(function() return library.debug_object.Visible ~= nil end) then
                     library.debug_object.Parent = nil
                     library.debug_object.Visible = false
                 end
-            else
-                library.debug_object.Parent = nil
-                library.debug_object.Visible = false
+
             end
 
+
             for index, drawing in next, library.drawings.active do
-                if drawing._object.Visible then
+                
+                if pcall(function() return drawing._object.Visible ~= nil end) then
                     if hover_object == drawing and not drawing.MouseHover then
                         drawing._properties.MouseHover = true
                         drawing.MouseEnter:Fire()
@@ -3461,13 +3482,16 @@ do
                         drawing.MouseLeave:Fire()
                     end
                 end
+
             end
+
 
             if library.dragging_slider then
                 library.dragging_slider:update()
             end
 
         end
+
     end)
 
     library:connection(camera:GetPropertyChangedSignal('FieldOfView'), function()
@@ -3477,26 +3501,33 @@ do
     end)
 
     library:connection(camera:GetPropertyChangedSignal('ViewportSize'), function()
-        for i,v in next, library.drawings.noparent do
-            v.Size = v.Size
-            v.Position = v.Position
+        for i, v in next, library.drawings.noparent do 
+            local drawing_alive = pcall(function() return v.Size ~= nil end)
+            if drawing_alive then
+                v.Size = v.Size
+                v.Position = v.Position
+            end
         end
-        for i,v in next, library.fovcircles do
-            v:update()
+
+        for i, v in next, library.fovcircles do
+            local fov_alive = pcall(function() return v._components[1].Visible ~= nil end)
+            if fov_alive then
+                v:update()
+            end
         end
     end)
 
     task.spawn(function()
         while task.wait(1 / 60) do
             local color = color3_hsv((tick() / 5) % 1, 0.5, 1)
-            for i,v in next, library.rainbows do
-                if not v.useaccent then
+            for i, v in next, library.rainbows do 
+                local picker_alive = pcall(function() return v.objects.background ~= nil end)
+                if picker_alive and not v.useaccent then
                     v:set(color, v.opacity)
                 end
             end
         end
     end)
-
 end
 
 -- // finish
